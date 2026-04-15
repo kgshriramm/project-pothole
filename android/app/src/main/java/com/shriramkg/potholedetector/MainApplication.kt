@@ -1,4 +1,4 @@
-package com.potholedetector
+package com.shriramkg.potholedetector
 
 import android.app.Application
 import com.facebook.react.PackageList

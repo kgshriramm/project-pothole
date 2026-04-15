@@ -14,6 +14,7 @@ import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { darkMapStyle } from './src/styles/mapStyle';
+import { loadBundledTfliteModel } from './src/ml/tflite';
 import * as Location from 'expo-location';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 
@@ -53,6 +54,8 @@ const App = () => {
   const [routeDetails, setRouteDetails] = useState<any>(null);
   const [isNavigating, setIsNavigating] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [tfliteStatus, setTfliteStatus] = useState<'loading' | 'loaded' | 'unavailable' | 'error'>('loading');
+  const [tfliteMessage, setTfliteMessage] = useState('Loading bundled TFLite model...');
 
   const fetchRoute = async (startCoord: {latitude: number, longitude: number}, endCoord: {latitude: number, longitude: number}) => {
     try {
@@ -209,6 +212,28 @@ const App = () => {
   // Fetch initial route 
   useEffect(() => {
     fetchRoute({ latitude: 12.9141, longitude: 74.8560 }, initialDestLocation);
+  }, []);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'test') {
+      return;
+    }
+
+    let mounted = true;
+
+    const loadModel = async () => {
+      const result = await loadBundledTfliteModel();
+      if (!mounted) return;
+
+      setTfliteStatus(result.state);
+      setTfliteMessage(result.message);
+    };
+
+    loadModel();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const currLocation = location 
@@ -395,6 +420,14 @@ const App = () => {
         {/* Only show Search form if NOT navigating */}
         {!isNavigating && (
           <View style={styles.searchCard}>
+            <View style={styles.modelStatusRow}>
+              <View style={[styles.modelStatusDot, tfliteStatus === 'loaded' ? styles.modelLoaded : tfliteStatus === 'loading' ? styles.modelLoading : styles.modelUnavailable]} />
+              <Text style={styles.modelStatusText} numberOfLines={2}>
+                {tfliteStatus === 'loaded'
+                  ? 'TFLite model ready for native inference.'
+                  : tfliteMessage}
+              </Text>
+            </View>
             <View style={styles.searchInputRow}>
               <Icon name="circle-double" size={16} color="#6B4DFF" style={styles.searchIcon} />
               <TextInput 
@@ -585,6 +618,36 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 8,
     marginBottom: 20,
+  },
+  modelStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.08)',
+  },
+  modelStatusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginTop: 4,
+    marginRight: 10,
+  },
+  modelLoaded: {
+    backgroundColor: '#00E676',
+  },
+  modelLoading: {
+    backgroundColor: '#FFCA28',
+  },
+  modelUnavailable: {
+    backgroundColor: '#FF7043',
+  },
+  modelStatusText: {
+    flex: 1,
+    color: '#D7D5E2',
+    fontSize: 13,
+    lineHeight: 18,
   },
   searchInputRow: {
     flexDirection: 'row',

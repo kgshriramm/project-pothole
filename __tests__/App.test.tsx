@@ -85,6 +85,13 @@ jest.mock('expo-camera', () => {
     useCameraPermissions: () => [{ granted: true }, jest.fn()],
   };
 });
+jest.mock('../src/ml/tflite', () => ({
+  loadBundledTfliteModel: jest.fn(async () => ({
+    model: {},
+    state: 'loaded',
+    message: 'TFLite model loaded successfully.',
+  })),
+}));
 jest.mock('@gorhom/bottom-sheet', () => {
   const React = require('react');
   const { View } = require('react-native');
@@ -96,5 +103,8 @@ import App from '../App';
 test('renders correctly', async () => {
   await ReactTestRenderer.act(() => {
     ReactTestRenderer.create(<App />);
+  });
+  await ReactTestRenderer.act(async () => {
+    await Promise.resolve();
   });
 });
